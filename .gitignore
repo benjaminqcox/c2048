@@ -1,0 +1,10 @@
+.*
+!.gitignore
+
+*.a
+*.o
+*.out
+*.l
+*.lib
+
+main
