@@ -1,7 +1,7 @@
 all: main
 
 main: main.o libs
-	gcc main.o -o main -L. game.a userInput.a
+	gcc main.o -o main -l ncurses -L. game.a userInput.a
 
 main.o: main.c
 	gcc -c main.c -o main.o
