@@ -353,6 +353,9 @@ void playGame(game_t *game)
         addRandomSquare(game);
 	}
 	clrtoeol();
+    clear();
+    printw("Final game position\n");
+    printGame(game);
 	refresh();
 	endwin();
     free2dArr(game->board, game->num_rows);
