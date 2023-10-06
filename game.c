@@ -324,18 +324,18 @@ void playGame(game_t *game)
 	while(!quit)
 	{	
         clear();
-        printw("Use wasd to choose move, r to reset and q to quit\n");
+        printw("Use wasd or arrow keys to choose move, r to reset and q to quit\n");
         printGame(game);
         refresh();
         c = getch();
         validChoice = true;
-        if (c == 'w')
+        if (c == 'w' || c == 65)
             squashUp(game);
-        else if (c == 'a')
+        else if (c == 'a' || c == 68)
             squashLeft(game);
-        else if (c == 's')
+        else if (c == 's' || c == 66)
             squashDown(game);
-        else if (c == 'd')
+        else if (c == 'd' || c == 67)
             squashRight(game);
         else if (c == 'r')
         {
