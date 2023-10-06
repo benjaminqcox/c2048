@@ -3,43 +3,64 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+#include <ncurses.h>
 #include "userInput.h"
 #include "game.h"
 
+#define STRING_WIDTH 5
 
-void free2dArr(int **arr, int numrows)
+void printGame(game_t *game)
 {
-    for (int row = 0; row < numrows; row++)
+    printw("Score: %d, Turns: %d\n", game->score, game->num_turns);
+    for (int row = 0; row < game->num_rows; row++)
+    {
+        for (int col = 0; col < game->num_columns; col++)
+        {
+            // %-* width adds 
+            printw("%-*d", STRING_WIDTH, game->board[row][col]);
+        }
+        printw("\n");
+    }
+}
+
+void free2dArr(int **arr, int num_rows)
+{
+    for (int row = 0; row < num_rows; row++)
     {
         free(arr[row]);
         arr[row] = NULL;
     }
 }
 
-void print2dArr(int **arr, int numrows, int numcolumns)
+void freeGame(game_t *game)
+{
+    // call free 2d array and then clear all stored variables in game (if there are any)
+}
+
+void print2dArr(game_t *game)
 {
     printf("##########\n");
-    for (int row = 0; row < numrows; row++)
+    for (int row = 0; row < game->num_rows; row++)
     {
-        for (int col = 0; col < numcolumns; col++)
+        for (int col = 0; col < game->num_columns; col++)
         {
-            if (col == numcolumns-1)
+            if (col == game->num_columns-1)
             {
-                printf("%d\n", arr[row][col]);
+                printf("%d\n", game->board[row][col]);
             }
             else
             {
-                printf("%d, ", arr[row][col]);
+                printf("%d, ", game->board[row][col]);
             }   
         }
     }
     printf("##########\n");
 }
 
-int **create2dArr(int numrows, int numcolumns)
+int **create2dArr(int num_rows, int num_columns)
 {
     // Allocate memory for 2d array
-    int **new2dArr = (int**)malloc(numrows * sizeof(int*));
+    int **new2dArr = (int**)malloc(num_rows * sizeof(int*));
     // Check memory was allocated correctly for the rows
     if (new2dArr == NULL)
     {
@@ -47,10 +68,10 @@ int **create2dArr(int numrows, int numcolumns)
         exit(EXIT_FAILURE);
     }
     
-    for (int row = 0; row < numrows; row++)
+    for (int row = 0; row < num_rows; row++)
     {
         // Allocate memory for each column in the array
-        new2dArr[row] = (int *)malloc(numcolumns * sizeof(int));
+        new2dArr[row] = (int *)malloc(num_columns * sizeof(int));
         if (new2dArr[row] == NULL)
         {
             fprintf(stderr, "Failed to allocate memory for columns.");
@@ -65,18 +86,40 @@ int **create2dArr(int numrows, int numcolumns)
     return new2dArr;
 }
 
-void reset2dArr(int **arr, int numrows, int numcolumns)
+void reset2dArr(int **arr, int num_rows, int num_columns)
 {
-    for (int row = 0; row < numrows; row++)
+    for (int row = 0; row < num_rows; row++)
     {
-        for (int col = 0; col < numcolumns; col++)
+        for (int col = 0; col < num_columns; col++)
         {
             arr[row][col] = 0;
         }
     }
 }
 
-void squashLeft(int **arr, int numrows, int numcolumns)
+void resetGame(game_t *game)
+{
+    reset2dArr(game->board, game->num_rows, game->num_columns);
+    game->score = 0;
+    game->num_turns = 0;
+}
+
+game_t *makeGame(int num_rows, int num_columns)
+{
+    game_t *game = (game_t *)malloc(sizeof(game_t));
+    if (game == NULL)
+    {
+        fprintf(stderr, "Failed to allocate memory for game.\n");
+        exit(EXIT_FAILURE);
+    }
+    game->board = create2dArr(MAX_ROWS, MAX_COLUMNS);
+    game->num_rows = num_rows;
+    game->num_columns = num_columns;
+    resetGame(game);
+    return game;
+}
+
+void squashLeft(game_t *game)
 {
     // This function has too many indents, need to separate it to make it cleaner and easier to read
 
@@ -85,25 +128,26 @@ void squashLeft(int **arr, int numrows, int numcolumns)
     // Loop through all columns from the current column y
     // if the y == 0 or y == x then combine the column values
     int col;
-    for (int row = 0; row < numrows; row++)
+    for (int row = 0; row < game->num_rows; row++)
     {
         col = 0;
-        while (col < numcolumns)
+        while (col < game->num_columns)
         {
-            for (int comb = col+1; comb < numcolumns; comb++)
+            for (int comb = col+1; comb < game->num_columns; comb++)
             {
-                if (arr[row][comb] > 0)
+                if (game->board[row][comb] > 0)
                 {
-                    if (arr[row][col] == 0)
+                    if (game->board[row][col] == 0)
                     {
-                        arr[row][col] = arr[row][comb];
-                        arr[row][comb] = 0;
+                        game->board[row][col] = game->board[row][comb];
+                        game->board[row][comb] = 0;
                         col--;
                     }
-                    else if(arr[row][col] == arr[row][comb])
+                    else if(game->board[row][col] == game->board[row][comb])
                     {
-                        arr[row][col] += arr[row][comb];
-                        arr[row][comb] = 0;
+                        game->board[row][col] += game->board[row][comb];
+                        game->score += game->board[row][col];
+                        game->board[row][comb] = 0;
                     }
                     break;
                 }
@@ -113,8 +157,7 @@ void squashLeft(int **arr, int numrows, int numcolumns)
     }
 }
 
-
-void squashRight(int **arr, int numrows, int numcolumns)
+void squashRight(game_t *game)
 {
     // This function has too many indents, need to separate it to make it cleaner and easier to read
 
@@ -123,25 +166,26 @@ void squashRight(int **arr, int numrows, int numcolumns)
     // Loop through all columns from the current column y
     // if the y == 0 or y == x then combine the column values
     int col;
-    for (int row = numrows-1; row >= 0; row--)
+    for (int row = game->num_rows-1; row >= 0; row--)
     {
-        col = numcolumns-1;
+        col = game->num_columns-1;
         while (col > 0)
         {
             for (int comb = col-1; comb >= 0; comb--)
             {
-                if (arr[row][comb] > 0)
+                if (game->board[row][comb] > 0)
                 {
-                    if (arr[row][col] == 0)
+                    if (game->board[row][col] == 0)
                     {
-                        arr[row][col] = arr[row][comb];
-                        arr[row][comb] = 0;
+                        game->board[row][col] = game->board[row][comb];
+                        game->board[row][comb] = 0;
                         col++;
                     }
-                    else if(arr[row][col] == arr[row][comb])
+                    else if(game->board[row][col] == game->board[row][comb])
                     {
-                        arr[row][col] += arr[row][comb];
-                        arr[row][comb] = 0;
+                        game->board[row][col] += game->board[row][comb];
+                        game->score += game->board[row][col];
+                        game->board[row][comb] = 0;
                     }
                     break;
                 }
@@ -151,8 +195,7 @@ void squashRight(int **arr, int numrows, int numcolumns)
     }
 }
 
-
-void squashUp(int **arr, int numrows, int numcolumns)
+void squashUp(game_t *game)
 {
     // This function has too many indents, need to separate it to make it cleaner and easier to read
 
@@ -161,25 +204,26 @@ void squashUp(int **arr, int numrows, int numcolumns)
     // Loop through all columns from the current column y
     // if the y == 0 or y == x then combine the column values
     int col;
-    for (int row = 0; row < numrows; row++)
+    for (int row = 0; row < game->num_rows; row++)
     {
         col = 0;
-        while (col < numcolumns)
+        while (col < game->num_columns)
         {
-            for (int comb = col+1; comb < numcolumns; comb++)
+            for (int comb = col+1; comb < game->num_columns; comb++)
             {
-                if (arr[comb][row] > 0)
+                if (game->board[comb][row] > 0)
                 {
-                    if (arr[col][row] == 0)
+                    if (game->board[col][row] == 0)
                     {
-                        arr[col][row] = arr[comb][row];
-                        arr[comb][row] = 0;
+                        game->board[col][row] = game->board[comb][row];
+                        game->board[comb][row] = 0;
                         col--;
                     }
-                    else if(arr[col][row] == arr[comb][row])
+                    else if(game->board[col][row] == game->board[comb][row])
                     {
-                        arr[col][row] += arr[comb][row];
-                        arr[comb][row] = 0;
+                        game->board[col][row] += game->board[comb][row];
+                        game->score += game->board[col][row];
+                        game->board[comb][row] = 0;
                     }
                     break;
                 }
@@ -189,7 +233,7 @@ void squashUp(int **arr, int numrows, int numcolumns)
     }
 }
 
-void squashDown(int **arr, int numrows, int numcolumns)
+void squashDown(game_t *game)
 {
     // This function has too many indents, need to separate it to make it cleaner and easier to read
 
@@ -198,25 +242,26 @@ void squashDown(int **arr, int numrows, int numcolumns)
     // Loop through all columns from the current column y
     // if the y == 0 or y == x then combine the column values
     int col;
-    for (int row = 0; row < numrows; row++)
+    for (int row = 0; row < game->num_rows; row++)
     {
-        col = numcolumns-1;
+        col = game->num_columns-1;
         while (col > 0)
         {
             for (int comb = col-1; comb >= 0; comb--)
             {
-                if (arr[comb][row] > 0)
+                if (game->board[comb][row] > 0)
                 {
-                    if (arr[col][row] == 0)
+                    if (game->board[col][row] == 0)
                     {
-                        arr[col][row] = arr[comb][row];
-                        arr[comb][row] = 0;
+                        game->board[col][row] = game->board[comb][row];
+                        game->board[comb][row] = 0;
                         col++;
                     }
-                    else if(arr[col][row] == arr[comb][row])
+                    else if(game->board[col][row] == game->board[comb][row])
                     {
-                        arr[col][row] += arr[comb][row];
-                        arr[comb][row] = 0;
+                        game->board[col][row] += game->board[comb][row];
+                        game->score += game->board[col][row];
+                        game->board[comb][row] = 0;
                     }
                     break;
                 }
@@ -226,14 +271,14 @@ void squashDown(int **arr, int numrows, int numcolumns)
     }
 }
 
-int countEmpty(int **arr, int numrows, int numcolumns)
+int countEmpty(game_t *game)
 {
     int numEmpty = 0;
-    for (int row = 0; row < numrows; row++)
+    for (int row = 0; row < game->num_rows; row++)
     {
-        for (int col = 0; col < numcolumns; col++)
+        for (int col = 0; col < game->num_columns; col++)
         {
-            if (arr[row][col] ==  0)
+            if (game->board[row][col] ==  0)
             {
                 numEmpty++;
             }
@@ -242,72 +287,74 @@ int countEmpty(int **arr, int numrows, int numcolumns)
     return numEmpty;
 }
 
-void addRandomSquare(int **arr, int numrows, int numcolumns)
+void addRandomSquare(game_t *game)
 {
-    int numEmpty = countEmpty(arr, numrows, numcolumns);
+    int numEmpty = countEmpty(game);
     // Check if numEmpty == 0 meaning there are no spare squares available for use
     int r = rand() % numEmpty + 1;
     int emptyCount = 0;
-    for (int row = 0; row < numrows; row++)
+    for (int row = 0; row < game->num_rows; row++)
     {
-        for (int col = 0; col < numcolumns; col++)
+        for (int col = 0; col < game->num_columns; col++)
         {
-            if (arr[row][col] == 0 && ++emptyCount == r)
+            if (game->board[row][col] == 0 && ++emptyCount == r)
             {
                 // Generate a random number between 1 and 100
                 // if it is greater than 10, then the value is 2
                 // otherwise the value is 4
                 // 10% chance of being a 4 value
-                arr[row][col] = ((rand() + 1) % 100) > 10 ? 2 : 4;
+                game->board[row][col] = ((rand() + 1) % 100) > 10 ? 2 : 4;
                 return;
             }
         }
     }
 }
 
-void playGame()
+void playGame(game_t *game)
 {
     srand((unsigned int)time(NULL));
-    int **gameBoard = create2dArr(MAX_ROWS, MAX_COLUMNS);
-    reset2dArr(gameBoard, MAX_ROWS, MAX_COLUMNS);
+    int choice = 0;
+	int c;
     bool quit = false;
-    int choice;
-    while (!quit)
-    {
-        system("clear");
-        addRandomSquare(gameBoard, MAX_ROWS, MAX_COLUMNS);
-        print2dArr(gameBoard, MAX_ROWS, MAX_COLUMNS);
-        printf("1 - left, 2 - right, 3 - up, 4 - down, 5 - reset, 0 - quit\n");
-        choice = getIntInputInRange(0, 5);
-        switch (choice)
+    bool validChoice = true;
+	initscr();
+	clear();
+	addRandomSquare(game);	
+	
+	while(!quit)
+	{	
+        clear();
+        printw("Use wasd to choose move, r to reset and q to quit\n");
+        printGame(game);
+        refresh();
+        c = getch();
+        validChoice = true;
+        if (c == 'w')
+            squashUp(game);
+        else if (c == 'a')
+            squashLeft(game);
+        else if (c == 's')
+            squashDown(game);
+        else if (c == 'd')
+            squashRight(game);
+        else if (c == 'r')
         {
-            case 1:
-                squashLeft(gameBoard, MAX_ROWS, MAX_COLUMNS);
-                break;
-            case 2:
-                squashRight(gameBoard, MAX_ROWS, MAX_COLUMNS);
-                break;
-            case 3:
-                squashUp(gameBoard, MAX_ROWS, MAX_COLUMNS);
-                break;
-            case 4:
-                squashDown(gameBoard, MAX_ROWS, MAX_COLUMNS);
-                break;
-            case 5:
-                reset2dArr(gameBoard, MAX_ROWS, MAX_COLUMNS);
-                break;
-            case 0:
-                printf("You have chosen to quit the game.");
-                quit = true;
-                break;
-            default:
-                printf("Unknown option. No changes have been made.\n");
-                break;
+            // Reset game, add square and loop back
+            // continue needed to not increment the num turns
+            resetGame(game);
+            addRandomSquare(game);
+            continue;
         }
-    }
-    system("clear");
-    printf("Final game position:\n");
-    print2dArr(gameBoard, MAX_ROWS, MAX_COLUMNS);
-    free2dArr(gameBoard, MAX_ROWS);
-    free(gameBoard);
+        else if (c == 'q')
+            break;
+        else
+            continue;
+        game->num_turns += 1;
+        addRandomSquare(game);
+	}
+	clrtoeol();
+	refresh();
+	endwin();
+    free2dArr(game->board, game->num_rows);
+    free(game->board);
 }
