@@ -12,6 +12,8 @@ typedef struct game
 
 void printGame(game_t *game);
 
+void printGame2(game_t game);
+
 void free2dArr(int **arr, int numrows);
 
 void freeGame(game_t *game);

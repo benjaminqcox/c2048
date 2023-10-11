@@ -16,8 +16,23 @@ void printGame(game_t *game)
     {
         for (int col = 0; col < game->num_columns; col++)
         {
+            //printw("(%d, %d)", row, col);
             // %-* width adds 
             printw("%-*d", STRING_WIDTH, game->board[row][col]);
+        }
+        printw("\n");
+    }
+}
+
+void printGame2(game_t game)
+{
+    printw("Score: %d, Turns: %d\n", game.score, game.num_turns);
+    for (int row = 0; row < game.num_rows; row++)
+    {
+        for (int col = 0; col < game.num_columns; col++)
+        {
+            // %-* width adds 
+            printw("%-*d", STRING_WIDTH, game.board[row][col]);
         }
         printw("\n");
     }
