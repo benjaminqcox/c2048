@@ -39,4 +39,4 @@ shared.a: shared.o
 libs: game.a userInput.a shared.a
 
 clean:
-	rm -f main *.o *.a
+	rm -f main server client db *.o *.a
