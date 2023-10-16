@@ -126,10 +126,6 @@ int main(int argc, char const *argv[])
     bool game_started = false;
     int c;
     game_t *current_game;
-    // current_game.num_rows = MAX_ROWS;
-    // current_game.num_columns = MAX_COLUMNS;
-    // current_game.num_turns = 0;
-    // current_game.score = 0;
 
     initscr();
     clear();
@@ -155,19 +151,20 @@ int main(int argc, char const *argv[])
             
             while (true)  // (!isGameOver(sock))
             {
+                // Clear all screen output and request from the server: num turns, score, entire board
                 clear();
                 recv(sock, &(current_game->num_turns), sizeof(int), 0);
                 recv(sock, &(current_game->score), sizeof(int), 0);
                 for (int i = 0; i < (current_game->num_columns * current_game->num_rows); i++)
                         recv(sock, &(current_game->board[i]), sizeof(int), 0);
                 
+                // Display user options and print game
                 printw("Use wasd or arrow keys to choose move, r to reset and q to quit\n");
-                //printGame(&current_game);
                 printGame(current_game);
                 refresh();
+                // Get user input
                 c = getch();
-                printw("%d\n", c);
-                // Check if valid move here first?
+                // Could loop until valid choice here but the server already deals with the input
                 if (send(sock, &c, sizeof(c), 0), 0)
                 {
                     perror("Send error");
@@ -183,15 +180,14 @@ int main(int argc, char const *argv[])
         }
         else
         {
+            // Reset screen output and display menu options to user
             clear();
-            printw("Select your option:\n");
-            printw("[0] Disconnect from server\n");
-            printw("[1] Start new game\n");
-            printw("[2] Load game\n");
+            printw("Select your option:\n[0] Disconnect from server\n[1] Start new game\n[2] Load game\n");
             refresh();
+            // Get user input
             c = getch();
             refresh();
-            // switch statement for all 4 options
+            // switch statement for all options
             switch (c) {
                 case QUIT:
                     // close the socket and disconnect from server, and exit program
@@ -207,9 +203,8 @@ int main(int argc, char const *argv[])
                     refresh();
                     break;
                 default:
-                    // if no valid option was selected, inform the user of that
-                    printw("Invalid input: Please select a valid option between 0 and 2.\n");
-                    refresh();
+                    //invalid input (could let user know but there is a clear statement on loopback 
+                    // so anything printed will likely not be seen)
                     break;
             }
         }

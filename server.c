@@ -103,9 +103,10 @@ int main()
             // Close the connection to the main socket from the client and just use the client connection socket
             close(sd);
             printf("Server connected to client.\n");
-            // Declare secret santa based variables
+            // The game has not started each time a child has been generated so set it to false
             game_started = false;
-
+            
+            // Loop the connection between the server and client for the menu and game
             while (true)
             {
                 // Send to client the result of has_drawn
@@ -115,24 +116,26 @@ int main()
                 }
                 if (game_started)
                 {
+                    // Game needs a random value to start with
                     addRandomSquare(current_game);
-                    //send(cl_sd, &value, sizeof(value), 0);
+                    // Constants that only need to be sent to the client once
                     send(cl_sd, &(current_game->num_rows), sizeof(int), 0);
                     send(cl_sd, &(current_game->num_columns), sizeof(int), 0);
                     
                     while(true)
                     {
+                        // Send to the client every move: num turns, score and entire game board
                         send(cl_sd, &(current_game->num_turns), sizeof(current_game->num_turns), 0);
                         send(cl_sd, &(current_game->score), sizeof(current_game->score), 0);
                         sendBoard(cl_sd, *current_game);
-                        printGame2(current_game);
-                        ssize_t inputGiven = recv(cl_sd, &c, sizeof(c), 0);
-                        printf("Input given: %zd\n", inputGiven);
-                        if (inputGiven < 0) // get user move choice
+
+                        // Receive the move selection from client
+                        if (recv(cl_sd, &c, sizeof(c), 0))
                         {
                             perror("Receive error");
                             exit(EXIT_FAILURE);
                         }
+                        // Perform action chosen by user
                         if (c == 'w' || c == 65)
                             squashUp(current_game);
                         else if (c == 'a' || c == 68)
@@ -143,8 +146,6 @@ int main()
                             squashRight(current_game);
                         else if (c == 'r')
                         {
-                            // Reset game, add square and loop back
-                            // continue needed to not increment the num turns
                             resetGame(current_game);
                             addRandomSquare(current_game);
                             continue;
@@ -156,9 +157,11 @@ int main()
                         }
                         else
                             continue;
+                        // Every time a move has been made, add num moves and add a random square to the board
                         current_game->num_turns += 1;
                         addRandomSquare(current_game);
                     }
+                    // If the game is over, free the memory used
                     free(current_game->board);
                 }
                 else
@@ -168,12 +171,6 @@ int main()
                         perror("Receive\n");
                         exit(EXIT_FAILURE);
                     }
-                    if (menuChoice == QUIT)
-                    {
-                        // Not sure why this isn't in the switch statement
-                        printf("Client has closed the connection\n");
-                        exit(EXIT_SUCCESS);
-                    }
                     switch(menuChoice)
                     {
                         case NEW_GAME:
@@ -182,6 +179,10 @@ int main()
                             break;
                         case LOAD_GAME:
                             printf("not implemented yet.\n");
+                            break;
+                        case QUIT:
+                            printf("Client has closed the connection\n");
+                            exit(EXIT_SUCCESS);
                             break;
                         default:
                             printf("Invalid selection");
