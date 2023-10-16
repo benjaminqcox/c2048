@@ -3,26 +3,26 @@
 
 typedef struct game
 {
-    int **board;
+    int *board;
     int score;
     int num_turns;
     int num_rows;
     int num_columns;
 } game_t;
 
+int getPos(game_t *game, int col, int row);
+
+int getVal(game_t *game, int col, int row);
+
+void updatePos(game_t *game, int val, int row, int col);
+
 void printGame(game_t *game);
 
-void printGame2(game_t game);
+void printGame2(game_t *game);
 
-void free2dArr(int **arr, int numrows);
+int *createBoard(int numrows, int numcolumns);
 
-void freeGame(game_t *game);
-
-void print2dArr(game_t *game);
-
-int **create2dArr(int numrows, int numcolumns);
-
-void reset2dArr(int **arr, int num_rows, int num_columns);
+void resetBoard(int *arr, int num_rows, int num_columns);
 
 void resetGame(game_t *game);
 

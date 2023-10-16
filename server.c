@@ -29,16 +29,12 @@ struct in_addr {
 
 void sendBoard(int sock, game_t game)
 {
-    int current_pos;
-    for (int row = 0; row < game.num_rows; row++)
+    for (int i = 0; i < (game.num_columns * game.num_rows); i++)
     {
-        for (int col = 0; col < game.num_columns; col++)
+        if (send(sock, &(game.board[i]), sizeof(game.board[i]), 0) < 0) // Get current game state
         {
-            if (send(sock, &(game.board[row][col]), sizeof(game.board[row][col]), 0) < 0) // Get current game state
-            {
-                perror("Send error");
-                exit(EXIT_FAILURE);
-            }
+            perror("Send error");
+            exit(EXIT_FAILURE);
         }
     }
 }
@@ -121,15 +117,15 @@ int main()
                 {
                     addRandomSquare(current_game);
                     //send(cl_sd, &value, sizeof(value), 0);
-                    send(cl_sd, &current_game->num_rows, sizeof(int), 0);
-                    send(cl_sd, &current_game->num_columns, sizeof(int), 0);
+                    send(cl_sd, &(current_game->num_rows), sizeof(int), 0);
+                    send(cl_sd, &(current_game->num_columns), sizeof(int), 0);
                     
                     while(true)
                     {
-                        send(cl_sd, &current_game->num_turns, sizeof(current_game->num_turns), 0);
-                        send(cl_sd, &current_game->score, sizeof(current_game->score), 0);
+                        send(cl_sd, &(current_game->num_turns), sizeof(current_game->num_turns), 0);
+                        send(cl_sd, &(current_game->score), sizeof(current_game->score), 0);
                         sendBoard(cl_sd, *current_game);
-                        print2dArr(current_game);
+                        printGame2(current_game);
                         ssize_t inputGiven = recv(cl_sd, &c, sizeof(c), 0);
                         printf("Input given: %zd\n", inputGiven);
                         if (inputGiven < 0) // get user move choice
@@ -154,14 +150,16 @@ int main()
                             continue;
                         }
                         else if (c == 'q')
+                        {
+                            game_started = false;
                             break;
+                        }
                         else
                             continue;
                         current_game->num_turns += 1;
                         addRandomSquare(current_game);
                     }
-                    free2dArr(current_game->board, current_game->num_rows);
-                    free(current_game->board);                    
+                    free(current_game->board);
                 }
                 else
                 {

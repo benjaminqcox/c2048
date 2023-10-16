@@ -125,7 +125,7 @@ int main(int argc, char const *argv[])
     int menuOption;
     bool game_started = false;
     int c;
-    game_t current_game;
+    game_t *current_game;
     // current_game.num_rows = MAX_ROWS;
     // current_game.num_columns = MAX_COLUMNS;
     // current_game.num_turns = 0;
@@ -148,26 +148,22 @@ int main(int argc, char const *argv[])
             // ENDED HERE TO FIX THIS WHILE LOOP
             // GAME IS NOT CURRENTLY DISPLAYING THE GAME BOARD
             refresh();
-            current_game.num_rows = recv_int(sock);
-            current_game.num_columns = recv_int(sock);
-            current_game.board = create2dArr(current_game.num_rows, current_game.num_columns);
+            int num_columns = recv_int(sock);
+            int num_rows = recv_int(sock);
+            current_game = makeGame(num_columns, num_rows);
+
             
             while (true)  // (!isGameOver(sock))
             {
                 clear();
-                recv(sock, &(current_game.num_turns), sizeof(int), 0);
-                recv(sock, &(current_game.score), sizeof(int), 0);
-                for (int row = 0; row < current_game.num_rows; row++)
-                {
-                    for (int col = 0; col < current_game.num_columns; col++)
-                    {
-                        recv(sock, &(current_game.board[row][col]), sizeof(int), 0);
-                    }
-                }
+                recv(sock, &(current_game->num_turns), sizeof(int), 0);
+                recv(sock, &(current_game->score), sizeof(int), 0);
+                for (int i = 0; i < (current_game->num_columns * current_game->num_rows); i++)
+                        recv(sock, &(current_game->board[i]), sizeof(int), 0);
                 
                 printw("Use wasd or arrow keys to choose move, r to reset and q to quit\n");
                 //printGame(&current_game);
-                printGame2(current_game);
+                printGame(current_game);
                 refresh();
                 c = getch();
                 printw("%d\n", c);
@@ -176,6 +172,12 @@ int main(int argc, char const *argv[])
                 {
                     perror("Send error");
                     exit(EXIT_FAILURE);
+                }
+                if (c == 'q')
+                {
+                    // just to go back te menu
+                    game_started = false;
+                    break;
                 }
             }
         }
