@@ -16,6 +16,11 @@ make
 mysql.server start
 ```
 
+## To connect to the db from the command line
+```
+mysql -u root
+```
+
 ## To stop a mysql server type this onto your terminal
 ```
 mysql.server stop
@@ -23,10 +28,10 @@ mysql.server stop
 
 ## To compile the database code
 ```
-gcc -I/opt/homebrew/opt/mysql/include/mysql/ -o db database.c -L/opt/homebrew/opt/mysql/lib -lmysqlclient
+gcc -I/opt/homebrew/opt/mysql/include/mysql/ -o database database.c -L/opt/homebrew/opt/mysql/lib -lmysqlclient
 ```
 
 ## To run the database code
 ```
-./db
+./database
 ```

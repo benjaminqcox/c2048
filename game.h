@@ -18,8 +18,6 @@ void updatePos(game_t *game, int val, int row, int col);
 
 void printGame(game_t *game);
 
-void printGame2(game_t *game);
-
 int *createBoard(int numrows, int numcolumns);
 
 void resetBoard(int *arr, int num_rows, int num_columns);
@@ -39,5 +37,3 @@ void squashDown(game_t *game);
 int countEmpty(game_t *game);
 
 void addRandomSquare(game_t *game);
-
-void playGame(game_t *game);

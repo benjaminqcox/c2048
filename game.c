@@ -11,22 +11,26 @@
 
 int getPos(game_t *game, int col, int row)
 {
+    // Convert 2d array position to 1d array position
     return game->num_columns * row + col;
 }
 
 int getVal(game_t *game, int col, int row)
 {
+    // Get value stored at a 2d array position
     return game->board[getPos(game, col, row)];
 }
 
 void updatePos(game_t *game, int val, int row, int col)
 {
+    // Update a value stored at a 2d array position
     int pos = getPos(game, col, row);
     game->board[pos] = val;
 }
 
 void printGame(game_t *game)
 {
+    // Print the game stats and board in the form of ncurses
     printw("Score: %d, Turns: %d\n", game->score, game->num_turns);
     for (int col = 0; col < game->num_columns; col++)
     {
@@ -40,20 +44,9 @@ void printGame(game_t *game)
     }
 }
 
-void printGame2(game_t *game)
-{
-    for (int col = 0; col < game->num_columns; col++)
-    {
-        for (int row = 0; row < game->num_rows; row++)
-        {
-            printf("%d ", getVal(game, col, row));
-        }
-        printf("\n");
-    }
-}
-
 int *createBoard(int num_columns, int num_rows)
 {
+    // Generate new game board array with a dynamically chosen size
     int board_size = num_columns * num_rows;
     // Allocate memory for the game board
     int *board = (int*)malloc(board_size * sizeof(int));
@@ -70,6 +63,7 @@ int *createBoard(int num_columns, int num_rows)
 
 void resetBoard(int *arr, int num_columns, int num_rows)
 {
+    // Set all values on the board to 0 (initial state)
     int board_size = num_columns * num_rows;
     for (int i = 0; i < board_size; i++)
     {
@@ -79,6 +73,7 @@ void resetBoard(int *arr, int num_columns, int num_rows)
 
 void resetGame(game_t *game)
 {
+    // Reset all game values including the board
     resetBoard(game->board, game->num_columns, game->num_rows);
     game->score = 0;
     game->num_turns = 0;
@@ -86,6 +81,7 @@ void resetGame(game_t *game)
 
 game_t *makeGame(int num_columns, int num_rows)
 {
+    // Generate all game values including the board
     game_t *game = (game_t *)malloc(sizeof(game_t));
     if (game == NULL)
     {
@@ -101,6 +97,9 @@ game_t *makeGame(int num_columns, int num_rows)
 
 void squashLeft(game_t *game)
 {
+    // Given a 2d array force all values to the left as much as they can
+    // e.g. 0 2 0 2 -> 4 0 0 0
+    //      0 2 0 4 -> 2 4 0 0
     int finalIndex, current, final;
     for (int row = 0; row < game->num_rows; row++)
     {
@@ -135,6 +134,9 @@ void squashLeft(game_t *game)
 
 void squashRight(game_t *game)
 {
+    // Given a 2d array force all values to the right as much as they can
+    // e.g. 0 2 0 2 -> 0 0 0 4
+    //      0 2 0 4 -> 0 0 2 4
     int finalIndex, current, final;
     for (int row = 0; row < game->num_rows; row++)
     {
@@ -169,12 +171,9 @@ void squashRight(game_t *game)
 
 void squashUp(game_t *game)
 {
-    // This function has too many indents, need to separate it to make it cleaner and easier to read
-
-    // Loop through all rows
-    // Loop through all columns x
-    // Loop through all columns from the current column y
-    // if the y == 0 or y == x then combine the column values
+    // Given a 2d array force all values to the up as much as they can
+    // e.g. 0 2 0 2 -> 2 4 0 2
+    //      2 2 0 4 -> 0 0 0 4
     int finalIndex, current, final;
     for (int row = 0; row < game->num_rows; row++)
     {
@@ -209,6 +208,9 @@ void squashUp(game_t *game)
 
 void squashDown(game_t *game)
 {
+    // Given a 2d array force all values to the up as much as they can
+    // e.g. 2 2 0 2 -> 0 0 0 2
+    //      0 2 0 4 -> 2 4 0 4
     int finalIndex, current, final;
     for (int row = 0; row < game->num_rows; row++)
     {
@@ -243,6 +245,7 @@ void squashDown(game_t *game)
 
 int countEmpty(game_t *game)
 {
+    // Find the number of board spaces that contain the value 0
     int numEmpty = 0;
     for (int i = 0; i < (game->num_columns * game->num_rows); i++)
         if (game->board[i] ==  0)
@@ -252,71 +255,18 @@ int countEmpty(game_t *game)
 
 void addRandomSquare(game_t *game)
 {
+    // Get the number of empty spaces and generate a random number between 1 and that number
+    // Go through the empty spaces until that number has been reached 
+    //  and set that value to 2 or a 10% chance of being 4
     int numEmpty = countEmpty(game);
-    // Check if numEmpty == 0 meaning there are no spare squares available for use
     int r = rand() % numEmpty + 1;
     int emptyCount = 0;
     for (int i = 0; i < (game->num_columns * game->num_rows); i++)
     {
         if (game->board[i] == 0 && ++emptyCount == r)
         {
-            // Generate a random number between 1 and 100
-            // if it is greater than 10, then the value is 2
-            // otherwise the value is 4
-            // 10% chance of being a 4 value
             game->board[i] = ((rand() + 1) % 100) > 10 ? 2 : 4;
             break;
         }
     }
-}
-
-void playGame(game_t *game)
-{
-    srand((unsigned int)time(NULL));
-    int choice = 0;
-	int c;
-    bool quit = false;
-    bool validChoice = true;
-	initscr();
-	clear();
-	addRandomSquare(game);	
-	
-	while(!quit)
-	{	
-        clear();
-        printw("Use wasd or arrow keys to choose move, r to reset and q to quit\n");
-        printGame(game);
-        refresh();
-        c = getch();
-        validChoice = true;
-        if (c == 'w' || c == 65)
-            squashUp(game);
-        else if (c == 'a' || c == 68)
-            squashLeft(game);
-        else if (c == 's' || c == 66)
-            squashDown(game);
-        else if (c == 'd' || c == 67)
-            squashRight(game);
-        else if (c == 'r')
-        {
-            // Reset game, add square and loop back
-            // continue needed to not increment the num turns
-            resetGame(game);
-            addRandomSquare(game);
-            continue;
-        }
-        else if (c == 'q')
-            break;
-        else
-            continue;
-        game->num_turns += 1;
-        addRandomSquare(game);
-	}
-	clrtoeol();
-    clear();
-    printw("Final game position\n");
-    printGame(game);
-	refresh();
-	endwin();
-    free(game->board);
 }
