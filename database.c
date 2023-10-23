@@ -1,9 +1,14 @@
-#include "/opt/homebrew/opt/mysql/include/mysql/mysql.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "database.h"
+#include "game.h"
 
 #define INSERT_USER_MAX_LENGTH 512
+// Need to calculate the actual value of this
+#define INSERT_USERS_GAME_MAX_LENGTH 512 
+// Need to calculate the actual value of this
+#define INSERT_GAME_STATE_MAX_LENGTH 512 
 
 void connectToDatabase(MYSQL *conn, char *server, char *user, char *password, char *database)
 {
@@ -27,11 +32,11 @@ void createUsersTable(MYSQL *conn)
     const char *createUserTable = 
     "CREATE TABLE IF NOT EXISTS "
     "users("
-        "userId int NOT NULL AUTO_INCREMENT, "
+        "user_id int NOT NULL AUTO_INCREMENT, "
         "username nvarchar(60) UNIQUE NOT NULL, "
         "email nvarchar(320) UNIQUE NOT NULL, "
         "password varchar(64) NOT NULL, "
-        "PRIMARY KEY (userId)"
+        "PRIMARY KEY (user_id)"
     ");";
     if (mysql_query(conn, createUserTable)) {
         fprintf(stderr, "%s\n", mysql_error(conn));
@@ -44,12 +49,12 @@ void createUsersGamesTable(MYSQL *conn)
     const char *createUsersGamesTable = 
     "CREATE TABLE IF NOT EXISTS "
     "usersGames("
-        "gameId int NOT NULL AUTO_INCREMENT, "
-        "userId int NOT NULL, "
-        "numrows int NOT NULL, "
-        "numcols int NOT NULL, "
-        "PRIMARY KEY (gameId), "
-        "FOREIGN KEY (userId) REFERENCES users(userId) "
+        "game_id int NOT NULL AUTO_INCREMENT, "
+        "user_id int NOT NULL, "
+        "num_rows int NOT NULL, "
+        "num_cols int NOT NULL, "
+        "PRIMARY KEY (game_id), "
+        "FOREIGN KEY (user_id) REFERENCES users(user_id) "
     ");";
     if (mysql_query(conn, createUsersGamesTable)) {
         fprintf(stderr, "%s\n", mysql_error(conn));
@@ -62,10 +67,11 @@ void createGameStatesTable(MYSQL *conn)
     const char *createGameStatesTable = 
     "CREATE TABLE IF NOT EXISTS "
     "gameStates("
-        "gameId int NOT NULL, "
+        "game_id int NOT NULL, "
         "score int NOT NULL, "
         "turns int NOT NULL, "
-        "state nvarchar(100) NOT NULL"
+        "state nvarchar(100) NOT NULL, "
+        "moves_in_past int NOT NULL"
     ");";
 
     if (mysql_query(conn, createGameStatesTable)) {
@@ -76,32 +82,35 @@ void createGameStatesTable(MYSQL *conn)
 
 void insertUser(MYSQL *conn, char *username, char *email, char *password)
 {
-    char insertUser[INSERT_USER_MAX_LENGTH];
-    snprintf(insertUser, INSERT_USER_MAX_LENGTH, "INSERT INTO users(username, email, password) VALUES(\"%s\", \"%s\", \"%s\");", username, email, password);
-    if (mysql_query(conn, insertUser)) {
+    char insertUserCom[INSERT_USER_MAX_LENGTH];
+    snprintf(insertUserCom, INSERT_USER_MAX_LENGTH, "INSERT INTO users(username, email, password) VALUES(\"%s\", \"%s\", \"%s\");", username, email, password);
+    if (mysql_query(conn, insertUserCom)) {
         fprintf(stderr, "%s\n", mysql_error(conn));
         exit(EXIT_FAILURE);
     }
 }
 
-void insertUsersGame(MYSQL *conn, char *username, char *email, char *password)
+void insertUsersGame(MYSQL *conn, int userId, int numColumns, int numRows)
 {
-    // char insertUser[INSERT_USER_MAX_LENGTH];
-    // snprintf(insertUser, INSERT_USER_MAX_LENGTH, "INSERT INTO users(username, email, password) VALUES(\"%s\", \"%s\", \"%s\");", username, email, password);
-    // if (mysql_query(conn, insertUser)) {
-    //     fprintf(stderr, "%s\n", mysql_error(conn));
-    //     exit(EXIT_FAILURE);
-    // }
+    //UNTESTED
+    // This will be executed everytime the user presses new game
+    char insertUsersGameCom[INSERT_USERS_GAME_MAX_LENGTH];
+    snprintf(insertUsersGameCom, INSERT_USERS_GAME_MAX_LENGTH, "INSERT INTO usersGames(user_id, num_rows, num_cols) VALUES(%d, %d, %d);", userId, numRows, numColumns);
+    if (mysql_query(conn, insertUsersGameCom)) {
+        fprintf(stderr, "%s\n", mysql_error(conn));
+        exit(EXIT_FAILURE);
+    }
 }
 
-void insertGameState(MYSQL *conn, char *username, char *email, char *password)
+void insertGameState(MYSQL *conn, int gameId, int score, int turns, char *gameState, int movesInPast)
 {
-    // char insertUser[INSERT_USER_MAX_LENGTH];
-    // snprintf(insertUser, INSERT_USER_MAX_LENGTH, "INSERT INTO users(username, email, password) VALUES(\"%s\", \"%s\", \"%s\");", username, email, password);
-    // if (mysql_query(conn, insertUser)) {
-    //     fprintf(stderr, "%s\n", mysql_error(conn));
-    //     exit(EXIT_FAILURE);
-    // }
+    //UNTESTED
+    char insertGameStateCom[INSERT_USER_MAX_LENGTH];
+    snprintf(insertGameStateCom, INSERT_USER_MAX_LENGTH, "INSERT INTO gameStates(game_id, score, turns, state, moves_in_past) VALUES(%d, %d, %d, \"%s\", %d);", gameId, score, turns, gameState, movesInPast);
+    if (mysql_query(conn, insertGameStateCom)) {
+        fprintf(stderr, "%s\n", mysql_error(conn));
+        exit(EXIT_FAILURE);
+    }
 }
 
 void useDatabase(MYSQL *conn)
@@ -129,35 +138,87 @@ void showTables(MYSQL *conn)
     mysql_free_result(res);
 }
 
-void printUsersTable(MYSQL *conn)
+void printTable(MYSQL *conn, char *table)
 {
     MYSQL_RES *res = NULL;
     MYSQL_ROW row;
-    const char *tables = "select * from users;";
-    if (mysql_query(conn, tables)) {
+    char columnsCom[64];
+    unsigned int numColumns;
+    snprintf(columnsCom, 64, "DESCRIBE `%s`;", table);
+    if (mysql_query(conn, columnsCom)) {
+        fprintf(stderr, "%s\n", mysql_error(conn));
+        exit(EXIT_FAILURE);
+    }
+    res = mysql_store_result(conn);
+    numColumns = mysql_num_rows(res);
+
+    char selectTableCom[64];
+    snprintf(selectTableCom, 64, "SELECT * FROM `%s`;", table);
+    if (mysql_query(conn, selectTableCom)) {
         fprintf(stderr, "%s\n", mysql_error(conn));
         exit(EXIT_FAILURE);
     }
     res = mysql_use_result(conn);
-    printf("Rows in users table:\n");
+    printf("Rows in %s table:\n", table);
     while ((row = mysql_fetch_row(res)) != NULL)
-        printf("%s, %s, %s, %s \n", row[0], row[1], row[2], row[3]);
+    {
+        for (int i = 0; i < numColumns; i++)
+        {
+            printf("%s", row[i]);
+            if (i < numColumns -1)
+            {
+                printf(", ");
+            }
+        }
+        printf("\n");
+    }
+
     mysql_free_result(res);
 }
 
-int main() {
-    
-    MYSQL *conn = mysql_init(NULL);
-    connectToDatabase(conn, "localhost", "root", "", "mysql");
-    createDatabase(conn);
-    useDatabase(conn);
-    createUsersTable(conn);
-    createUsersGamesTable(conn);
-    createGameStatesTable(conn);
-    insertUser(conn, "benkei", "themonsterzclan@gmail.com", "plaintext");
-    showTables(conn);
-    printUsersTable(conn);
-
-    mysql_close(conn);
+int selectUserId(MYSQL *conn, char* username)
+{
+    MYSQL_RES *res = NULL;
+    MYSQL_ROW row;
+    char selectUserIdCom[64];
+    snprintf(selectUserIdCom, 64, "SELECT `user_id` FROM `users` WHERE `username` LIKE '%%%s%%';", username);
+    if (mysql_query(conn, selectUserIdCom)) {
+        fprintf(stderr, "%s\n", mysql_error(conn));
+        exit(EXIT_FAILURE);
+    }
+    res = mysql_store_result(conn);
+    row = mysql_fetch_row(res);
+    if (row == NULL)
+    {
+        fprintf(stderr, "User not found.\n");
+        return -1;
+    }
+    return atoi(row[0]); // do not keep as atoi
 }
 
+MYSQL_RES *selectUsersGame(MYSQL *conn, int userId)
+{
+    MYSQL_RES *res = NULL;
+    MYSQL_ROW row;
+    char selectUsersGameCom[64];
+    snprintf(selectUsersGameCom, 64, "SELECT * FROM `usersGames` WHERE `user_id`=%d;", userId);
+    if (mysql_query(conn, selectUsersGameCom)) {
+        fprintf(stderr, "%s\n", mysql_error(conn));
+        exit(EXIT_FAILURE);
+    }
+    res = mysql_store_result(conn);
+    return res;
+}
+
+MYSQL_RES *selectGameStates(MYSQL *conn, int gameId)
+{
+    MYSQL_RES *res = NULL;
+    char selectGameStatesCom[64];
+    snprintf(selectGameStatesCom, 64, "SELECT * FROM `gameStates` WHERE `game_id`=%d;", gameId);
+    if (mysql_query(conn, selectGameStatesCom)) {
+        fprintf(stderr, "%s\n", mysql_error(conn));
+        exit(EXIT_FAILURE);
+    }
+    res = mysql_store_result(conn);
+    return res;
+}

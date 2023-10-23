@@ -7,7 +7,7 @@ main.o: main.c
 	gcc -c main.c -o main.o
 
 server: server.o libs
-	gcc server.o -o server -l ncurses -L. game.a
+	gcc server.o -o server -I /opt/homebrew/opt/mysql/include/mysql/ -L /opt/homebrew/opt/mysql/lib ./game.a ./database.a -l ncurses -l mysqlclient
 
 server.o: server.c
 	gcc -c server.c -o server.o
@@ -36,7 +36,13 @@ shared.o: shared.c
 shared.a: shared.o
 	ar rcs shared.a shared.o
 
-libs: game.a userInput.a shared.a
+database.o: database.c
+	gcc -c database.c -o database.o
+
+database.a: database.o
+	ar rcs database.a database.o
+
+libs: game.a userInput.a shared.a database.a
 
 clean:
-	rm -f main server client db *.o *.a
+	rm -f main server client database *.o *.a

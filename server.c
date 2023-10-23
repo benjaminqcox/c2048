@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include "shared.h"
 #include "game.h"
+#include "database.h"
 
 /*
 // Struct format
@@ -50,10 +51,46 @@ int main()
     ssize_t sent_bytes;
     bool active_client = false;
 
+    MYSQL *conn = mysql_init(NULL);
+    MYSQL_RES *res = NULL;
+    MYSQL_ROW row;
+    connectToDatabase(conn, "localhost", "root", "", "mysql");
+    createDatabase(conn);
+    useDatabase(conn);
+    createUsersTable(conn);
+    createUsersGamesTable(conn);
+    createGameStatesTable(conn);
+    insertUser(conn, "ben", "ben@gmail.com", "plaintext");
+    int userId = selectUserId(conn, "ben");
+    insertUsersGame(conn, userId, MAX_COLUMNS, MAX_ROWS);
+    res = selectUsersGame(conn, userId);
+    row = mysql_fetch_row(res);
+    if (row == NULL)
+    {
+        fprintf(stderr, "No data in users games.\n");
+        exit(EXIT_FAILURE);
+    }
+    int gameId = atoi(row[0]);
+    insertGameState(conn, gameId, 4, 2, "0000000400000200", 0);
+    int numColumns = atoi(row[3]);
+    int numRows = atoi(row[2]);
+    res = selectGameStates(conn, gameId);
+    while ((row = mysql_fetch_row(res)) != NULL)
+    {
+        printf("%s\n", row[3]);
+    }
+    //insertGameState(conn, gameId, numColumns, numRows, "0000000200000004");
+    showTables(conn);
+    printTable(conn, "users");
+    printTable(conn, "usersGames");
+    printTable(conn, "gameStates");
 
+    
 
     // game related variables
+
     game_t *current_game = NULL;
+    char *board_state = NULL;
     bool game_started = false;
     int menuChoice;
     srand((unsigned int)time(NULL));
@@ -119,8 +156,8 @@ int main()
                     // Game needs a random value to start with
                     addRandomSquare(current_game);
                     // Constants that only need to be sent to the client once
-                    send(cl_sd, &(current_game->num_rows), sizeof(int), 0);
                     send(cl_sd, &(current_game->num_columns), sizeof(int), 0);
+                    send(cl_sd, &(current_game->num_rows), sizeof(int), 0);
                     
                     while(true)
                     {
@@ -130,7 +167,7 @@ int main()
                         sendBoard(cl_sd, *current_game);
 
                         // Receive the move selection from client
-                        if (recv(cl_sd, &c, sizeof(c), 0))
+                        if (recv(cl_sd, &c, sizeof(c), 0) < 0)
                         {
                             perror("Receive error");
                             exit(EXIT_FAILURE);
@@ -147,11 +184,19 @@ int main()
                         else if (c == 'r')
                         {
                             resetGame(current_game);
+                            // Need a way to get the current users index to replace the 1 (that will be stored on login or registering)
+                            insertUsersGame(conn, 1, current_game->num_columns, current_game->num_rows);
+                            // Need a way to get the current games index to replace the 1
                             addRandomSquare(current_game);
+                            board_state = boardToString(current_game->board, current_game->num_columns, current_game->num_rows);
+                            printf("current board: %s\n", board_state);
+                            insertGameState(conn, 1, current_game->score, current_game->num_turns, board_state, 0);
                             continue;
                         }
                         else if (c == 'q')
                         {
+                            board_state = boardToString(current_game->board, current_game->num_columns, current_game->num_rows);
+                            insertGameState(conn, 1, current_game->score, current_game->num_turns, board_state, 0);
                             game_started = false;
                             break;
                         }
@@ -174,13 +219,25 @@ int main()
                     switch(menuChoice)
                     {
                         case NEW_GAME:
-                            current_game = makeGame(MAX_ROWS, MAX_COLUMNS);
+
+                            current_game = makeGame(MAX_COLUMNS, MAX_ROWS);
+                            // board_state = boardToString(current_game->board, current_game->num_columns, current_game->num_rows);
+                            // insertGameState(conn, 1, current_game->score, current_game->num_turns, board_state);
                             game_started = true; // pass this by reference to update this value in make game in class it has not been made correctly
                             break;
                         case LOAD_GAME:
-                            printf("not implemented yet.\n");
+                            res = selectGameStates(conn, 1);
+                            row = mysql_fetch_row(res);
+                            // need to get the num columns and num rows from the usersGames table
+                            current_game = makeGame(MAX_COLUMNS, MAX_ROWS);
+                            current_game->score = atoi(row[1]); // don't use atoi, it is not robust
+                            current_game->num_turns = atoi(row[2]);
+                            current_game->board = stringToBoard(row[3], current_game->num_columns, current_game->num_rows);
+                            printBoard(current_game->board, current_game->num_columns, current_game->num_rows);
+                            game_started = true;
                             break;
                         case QUIT:
+                            free(board_state);
                             printf("Client has closed the connection\n");
                             exit(EXIT_SUCCESS);
                             break;
@@ -204,6 +261,44 @@ int main()
     }
     // Close the main socket
     close(sd);
-
+    mysql_close(conn);
     return 0;
 }
+
+// int main()
+// {
+
+//     MYSQL *conn = mysql_init(NULL);
+//     MYSQL_RES *res = NULL;
+//     MYSQL_ROW row;
+//     connectToDatabase(conn, "localhost", "root", "", "mysql");
+//     createDatabase(conn);
+//     useDatabase(conn);
+//     createUsersTable(conn);
+//     createUsersGamesTable(conn);
+//     createGameStatesTable(conn);
+//     //insertUser(conn, "hanban", "hwagner112@gmail.com", "securepassword");
+    
+//     // insertGameState(conn, 1, 4, 2, "0204");
+//     showTables(conn);
+//     printTable(conn, "users");
+//     printTable(conn, "usersGames");
+//     printTable(conn, "gameStates");
+
+//     res = selectGameStates(conn, 1);
+//     row = mysql_fetch_row(res);
+//     // Need to type cast the database values (atoi is not robust at all, 
+//     //  I'm just doing it here because its quick and dirty and does the trick to double check stuff is working)
+//     // which it is! woohoo
+//     game_t *game = makeGame(2, 2);
+//     game->score = atoi(row[1]);
+//     game->num_turns = atoi(row[2]);
+//     game->board = stringToBoard(row[3], 2, 2);
+
+//     printf("Score: %d, num_turns: %d\n", game->score, game->num_turns);
+//     printBoard(game->board, 2, 2);
+//     free(game->board);
+
+//     mysql_close(conn);
+//     mysql_free_result(res);
+// }

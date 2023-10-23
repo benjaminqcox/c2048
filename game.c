@@ -44,6 +44,20 @@ void printGame(game_t *game)
     }
 }
 
+void printBoard(int *board, int num_columns, int num_rows)
+{
+    for (int col = 0; col < num_columns; col++)
+    {
+        for (int row = 0; row < num_rows; row++)
+        {
+            //printw("(%d, %d)", row, col);
+            // %-* width adds 
+            printf("%-*d", STRING_WIDTH, board[num_columns * row + col]);
+        }
+        printf("\n");
+    }
+}
+
 int *createBoard(int num_columns, int num_rows)
 {
     // Generate new game board array with a dynamically chosen size
@@ -269,4 +283,37 @@ void addRandomSquare(game_t *game)
             break;
         }
     }
+}
+
+char *boardToString(int *board, int num_columns, int num_rows)
+{
+    int boardSize = num_columns * num_rows;
+    char *strBoard = (char *)malloc(boardSize);
+    if (strBoard == NULL)
+    {
+        fprintf(stderr, "Failed to allocate memory.\n");
+        exit(EXIT_FAILURE);
+    }
+    for (int i = 0; i < boardSize; i++)
+    {
+        strBoard[i] = board[i] + '0';
+    }
+    strBoard[boardSize] = '\0';
+    return strBoard;
+}
+
+int *stringToBoard(char *strBoard, int num_columns, int num_rows)
+{
+    int boardSize = num_columns * num_rows;
+    int *board = (int *)malloc(boardSize);
+    if (board == NULL)
+    {
+        fprintf(stderr, "Failed to allocate memory.\n");
+        exit(EXIT_FAILURE);
+    }
+    for (int i = 0; i < boardSize; i++)
+    {
+        board[i] = strBoard[i] - '0';
+    }
+    return board;
 }

@@ -39,6 +39,16 @@ void newGame(int sock)
     // check game was created
 }
 
+void loadGame(int sock)
+{
+    int option = LOAD_GAME;
+    if (send(sock, &option, sizeof(option), 0) < 0) {
+        perror("Send error");
+        return;
+    }
+    // check game was created
+}
+
 game_t getGameState(int sock)
 {
     game_t *currentGame = NULL;
@@ -164,8 +174,10 @@ int main(int argc, char const *argv[])
                 refresh();
                 // Get user input
                 c = getch();
+                printw("You pressed: %d\n", c);
+                refresh();
                 // Could loop until valid choice here but the server already deals with the input
-                if (send(sock, &c, sizeof(c), 0), 0)
+                if (send(sock, &c, sizeof(c), 0) < 0)
                 {
                     perror("Send error");
                     exit(EXIT_FAILURE);
@@ -198,9 +210,7 @@ int main(int argc, char const *argv[])
                     newGame(sock);
                     break;
                 case LOAD_GAME:
-                    printw("Loading previous games...\n");
-                    printw("no implementation added here yet\n");
-                    refresh();
+                    loadGame(sock);
                     break;
                 default:
                     //invalid input (could let user know but there is a clear statement on loopback 
